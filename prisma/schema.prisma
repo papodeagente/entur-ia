@@ -29,3 +29,9 @@ model Message {
 
   @@index([conversationId])
 }
+
+model Setting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}

@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Provider } from './models';
+import { getApiKey } from './settings';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -11,28 +12,21 @@ export interface ChatMessage {
 export interface StreamArgs {
   model: string;
   messages: ChatMessage[];
+  apiKey: string;
 }
 
-function getOpenAI() {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error('OPENAI_API_KEY não configurada no servidor');
-  return new OpenAI({ apiKey: key });
+export class MissingKeyError extends Error {
+  provider: Provider;
+  constructor(provider: Provider) {
+    super(
+      `Chave de API do provider "${provider}" não configurada. Acesse Configurações e cadastre a chave.`
+    );
+    this.provider = provider;
+  }
 }
 
-function getAnthropic() {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error('ANTHROPIC_API_KEY não configurada no servidor');
-  return new Anthropic({ apiKey: key });
-}
-
-function getGemini() {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('GEMINI_API_KEY não configurada no servidor');
-  return new GoogleGenerativeAI(key);
-}
-
-export async function* streamOpenAI({ model, messages }: StreamArgs): AsyncGenerator<string> {
-  const client = getOpenAI();
+export async function* streamOpenAI({ model, messages, apiKey }: StreamArgs): AsyncGenerator<string> {
+  const client = new OpenAI({ apiKey });
   const stream = await client.chat.completions.create({
     model,
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -44,8 +38,12 @@ export async function* streamOpenAI({ model, messages }: StreamArgs): AsyncGener
   }
 }
 
-export async function* streamAnthropic({ model, messages }: StreamArgs): AsyncGenerator<string> {
-  const client = getAnthropic();
+export async function* streamAnthropic({
+  model,
+  messages,
+  apiKey,
+}: StreamArgs): AsyncGenerator<string> {
+  const client = new Anthropic({ apiKey });
   const system = messages.find((m) => m.role === 'system')?.content;
   const conv = messages
     .filter((m) => m.role !== 'system')
@@ -64,8 +62,12 @@ export async function* streamAnthropic({ model, messages }: StreamArgs): AsyncGe
   }
 }
 
-export async function* streamGemini({ model, messages }: StreamArgs): AsyncGenerator<string> {
-  const client = getGemini();
+export async function* streamGemini({
+  model,
+  messages,
+  apiKey,
+}: StreamArgs): AsyncGenerator<string> {
+  const client = new GoogleGenerativeAI(apiKey);
   const systemMsg = messages.find((m) => m.role === 'system')?.content;
   const conv = messages.filter((m) => m.role !== 'system');
 
@@ -93,10 +95,15 @@ export async function* streamGemini({ model, messages }: StreamArgs): AsyncGener
 
 export async function* streamFromProvider(
   provider: Provider,
-  args: StreamArgs
+  args: Omit<StreamArgs, 'apiKey'>
 ): AsyncGenerator<string> {
-  if (provider === 'openai') yield* streamOpenAI(args);
-  else if (provider === 'anthropic') yield* streamAnthropic(args);
-  else if (provider === 'gemini') yield* streamGemini(args);
+  const apiKey = await getApiKey(provider);
+  if (!apiKey) throw new MissingKeyError(provider);
+
+  const fullArgs: StreamArgs = { ...args, apiKey };
+
+  if (provider === 'openai') yield* streamOpenAI(fullArgs);
+  else if (provider === 'anthropic') yield* streamAnthropic(fullArgs);
+  else if (provider === 'gemini') yield* streamGemini(fullArgs);
   else throw new Error(`Provider desconhecido: ${provider}`);
 }

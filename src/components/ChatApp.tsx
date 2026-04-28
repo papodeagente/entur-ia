@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import ChatArea from './ChatArea';
+import SettingsModal from './SettingsModal';
 import { DEFAULT_MODEL } from '@/lib/models';
 
 export interface ConversationListItem {
@@ -25,6 +26,7 @@ export default function ChatApp() {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [modelId, setModelId] = useState<string>(DEFAULT_MODEL);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const loadConversations = useCallback(async () => {
     const res = await fetch('/api/conversations');
@@ -82,6 +84,7 @@ export default function ChatApp() {
           onNew={newChat}
           onDelete={deleteConversation}
           onClose={() => setSidebarOpen(false)}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
       )}
       <ChatArea
@@ -95,7 +98,9 @@ export default function ChatApp() {
         onAfterSend={loadConversations}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

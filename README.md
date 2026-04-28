@@ -11,12 +11,15 @@ Chat unificado com GPT (OpenAI), Gemini (Google) e Claude (Anthropic) numa únic
 
 ## Variáveis de ambiente
 
+Apenas duas obrigatórias no servidor:
+
 ```
 DATABASE_URL=postgresql://user:pass@host:5432/db
-OPENAI_API_KEY=sk-...
-GEMINI_API_KEY=AIza...
-ANTHROPIC_API_KEY=sk-ant-...
+APP_SECRET=string-aleatoria-32+chars-para-criptografar-as-chaves
 ```
+
+As chaves das IAs (OpenAI, Gemini, Anthropic) são cadastradas **dentro do sistema**,
+no botão **Configurações**. Ficam armazenadas criptografadas (AES-256-GCM) no banco.
 
 ## Desenvolvimento
 

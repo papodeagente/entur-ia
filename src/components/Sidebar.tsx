@@ -9,6 +9,7 @@ interface Props {
   onNew: () => void;
   onDelete: (id: string) => void;
   onClose: () => void;
+  onOpenSettings: () => void;
 }
 
 export default function Sidebar({
@@ -18,6 +19,7 @@ export default function Sidebar({
   onNew,
   onDelete,
   onClose,
+  onOpenSettings,
 }: Props) {
   return (
     <aside className="w-64 shrink-0 bg-bg-secondary flex flex-col h-full border-r border-black/20">
@@ -80,9 +82,21 @@ export default function Sidebar({
         </ul>
       </div>
 
-      <div className="p-3 border-t border-white/10 text-xs text-text-tertiary">
-        <div className="font-semibold text-text-secondary">Entur IA</div>
-        <div>GPT · Gemini · Claude</div>
+      <div className="p-3 border-t border-white/10 space-y-2">
+        <button
+          onClick={onOpenSettings}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition text-sm"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+          </svg>
+          Configurações
+        </button>
+        <div className="text-xs text-text-tertiary px-1">
+          <div className="font-semibold text-text-secondary">Entur IA</div>
+          <div>GPT · Gemini · Claude</div>
+        </div>
       </div>
     </aside>
   );
