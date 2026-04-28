@@ -91,8 +91,7 @@ export default function Sidebar({
   return (
     <aside className="w-64 shrink-0 bg-bg-secondary flex flex-col h-full border-r border-black/20">
       <div className="px-3 pt-3 pb-2 flex items-center gap-2">
-        <img src="/logo-mark.svg" alt="Entur" className="h-7 w-auto" />
-        <span className="text-sm font-semibold text-text-primary">IA</span>
+        <img src="/logo.png" alt="Entur · Escola de Negócios do Turismo" className="h-8 w-auto" />
       </div>
       <div className="px-3 pb-2 flex items-center gap-2">
         <button

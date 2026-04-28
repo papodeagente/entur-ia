@@ -425,7 +425,7 @@ export default function ChatArea({
         )}
         <div className="flex items-center gap-2 truncate min-w-0">
           {!activeConversation && (
-            <img src="/logo-mark.svg" alt="Entur" className="h-6 w-auto" />
+            <img src="/logo.png" alt="Entur" className="h-7 w-auto" />
           )}
           <span className="font-semibold truncate">
             {activeConversation?.title || 'Entur IA'}
@@ -690,9 +690,9 @@ function Welcome({
     <div className="text-center pt-10 pb-8 animate-fade-in">
       <div className="flex justify-center mb-6">
         <img
-          src="/logo.svg"
+          src="/logo.png"
           alt="Entur · Escola de Negócios do Turismo"
-          className="h-14 sm:h-16 w-auto"
+          className="h-12 sm:h-16 w-auto"
         />
       </div>
       <h1 className="text-3xl font-semibold mb-2">

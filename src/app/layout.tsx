@@ -5,9 +5,7 @@ export const metadata: Metadata = {
   title: 'Entur IA · Escola de Negócios do Turismo',
   description: 'Chat unificado com GPT, Gemini e Claude — by Entur',
   icons: {
-    icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-    ],
+    icon: [{ url: '/logo.png', type: 'image/png' }],
   },
 };
 
