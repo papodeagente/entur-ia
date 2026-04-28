@@ -16,9 +16,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json();
+  const data: any = {};
+  if (typeof body.title === 'string') data.title = body.title;
+  if (typeof body.systemPrompt === 'string') data.systemPrompt = body.systemPrompt || null;
+  if (body.toolsConfig !== undefined) data.toolsConfig = body.toolsConfig;
+
   const conv = await prisma.conversation.update({
     where: { id: params.id },
-    data: { title: body.title },
+    data,
   });
   return NextResponse.json(conv);
 }

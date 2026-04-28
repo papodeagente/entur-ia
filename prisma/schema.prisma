@@ -8,11 +8,13 @@ datasource db {
 }
 
 model Conversation {
-  id        String    @id @default(cuid())
-  title     String    @default("Nova conversa")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  messages  Message[]
+  id           String    @id @default(cuid())
+  title        String    @default("Nova conversa")
+  systemPrompt String?   @db.Text
+  toolsConfig  Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  messages     Message[]
 
   @@index([updatedAt])
 }
@@ -22,12 +24,27 @@ model Message {
   conversationId String
   role           String
   content        String       @db.Text
+  attachments    Json?
+  outputs        Json?
+  thinking       String?      @db.Text
+  citations      Json?
   model          String?
   provider       String?
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
+}
+
+model Template {
+  id        String   @id @default(cuid())
+  name      String
+  category  String?
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
 }
 
 model Setting {

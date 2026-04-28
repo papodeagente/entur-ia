@@ -10,6 +10,8 @@ interface Props {
   onDelete: (id: string) => void;
   onClose: () => void;
   onOpenSettings: () => void;
+  onOpenTemplates: () => void;
+  onOpenCompare: () => void;
 }
 
 export default function Sidebar({
@@ -20,6 +22,8 @@ export default function Sidebar({
   onDelete,
   onClose,
   onOpenSettings,
+  onOpenTemplates,
+  onOpenCompare,
 }: Props) {
   return (
     <aside className="w-64 shrink-0 bg-bg-secondary flex flex-col h-full border-r border-black/20">
@@ -41,6 +45,21 @@ export default function Sidebar({
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M3 12h13M9 6l-6 6 6 6" />
           </svg>
+        </button>
+      </div>
+
+      <div className="px-3 pb-2 flex flex-wrap gap-1">
+        <button
+          onClick={onOpenTemplates}
+          className="flex-1 text-xs px-2 py-1.5 rounded-md hover:bg-white/5 transition border border-white/10"
+        >
+          📋 Templates
+        </button>
+        <button
+          onClick={onOpenCompare}
+          className="flex-1 text-xs px-2 py-1.5 rounded-md hover:bg-white/5 transition border border-white/10"
+        >
+          ⚖️ Comparar
         </button>
       </div>
 
@@ -89,9 +108,9 @@ export default function Sidebar({
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h0a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h0a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v0a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
           </svg>
-          Configurações
+          Configurações de API
         </button>
         <div className="text-xs text-text-tertiary px-1">
           <div className="font-semibold text-text-secondary">Entur IA</div>
