@@ -5,14 +5,15 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const conversations = await prisma.conversation.findMany({
-    orderBy: { updatedAt: 'desc' },
+    orderBy: [{ pinned: 'desc' }, { updatedAt: 'desc' }],
     select: {
       id: true,
       title: true,
+      pinned: true,
       createdAt: true,
       updatedAt: true,
     },
-    take: 100,
+    take: 200,
   });
   return NextResponse.json(conversations);
 }

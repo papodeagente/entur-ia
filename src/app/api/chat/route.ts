@@ -9,6 +9,7 @@ import {
   ToolFlags,
   StreamEvent,
 } from '@/lib/providers';
+import { buildSystemPrompt } from '@/lib/userContext';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,7 @@ interface ChatRequest {
   attachments?: Attachment[];
   tools?: ToolFlags;
   systemPromptOverride?: string;
+  clearLast?: number;
 }
 
 const DEFAULT_SYSTEM =
@@ -53,7 +55,23 @@ export async function POST(req: NextRequest) {
     where: { id: conversationId },
     select: { systemPrompt: true },
   });
-  const systemPrompt = body.systemPromptOverride || conv?.systemPrompt || DEFAULT_SYSTEM;
+  const baseSystemPrompt = body.systemPromptOverride || conv?.systemPrompt || DEFAULT_SYSTEM;
+  const systemPrompt = await buildSystemPrompt({
+    conversationSystemPrompt: baseSystemPrompt,
+    defaultPrompt: DEFAULT_SYSTEM,
+  });
+
+  if (body.clearLast && body.clearLast > 0 && conversationId) {
+    const toDelete = await prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: 'desc' },
+      take: body.clearLast,
+      select: { id: true },
+    });
+    if (toDelete.length) {
+      await prisma.message.deleteMany({ where: { id: { in: toDelete.map((m) => m.id) } } });
+    }
+  }
 
   const previous = await prisma.message.findMany({
     where: { conversationId },

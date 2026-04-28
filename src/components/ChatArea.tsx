@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ConversationDetail, MessageItem } from './ChatApp';
+import { ConversationDetail, MessageItem, UserProfile } from './ChatApp';
 import MessageBubble from './MessageBubble';
 import ModelSelector from './ModelSelector';
 import { getModel, modelHas, isImageModel } from '@/lib/models';
+
+type SettingsTab = 'profile' | 'api' | 'memories';
 
 interface Props {
   messages: MessageItem[];
@@ -19,9 +21,11 @@ interface Props {
   onAfterSend: () => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
-  onOpenSettings: () => void;
+  onOpenSettings: (tab?: SettingsTab) => void;
   onOpenTemplates: () => void;
   onOpenConvSettings: () => void;
+  profile: UserProfile | null;
+  onMemoryAdded: (content: string) => void;
 }
 
 interface PendingAttachment {
@@ -43,6 +47,22 @@ async function fileToAttachment(file: File): Promise<PendingAttachment> {
   return { kind, mimeType: file.type || 'application/octet-stream', data: b64, name: file.name };
 }
 
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Bom dia';
+  if (h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+const SUGGESTIONS = [
+  { icon: '✨', title: 'Brainstorm', prompt: 'Me ajude a fazer brainstorm sobre ' },
+  { icon: '📝', title: 'Resumir texto', prompt: 'Resuma o seguinte texto em bullets:\n\n' },
+  { icon: '🐍', title: 'Código', prompt: 'Escreva uma função em TypeScript que ' },
+  { icon: '🌐', title: 'Traduzir', prompt: 'Traduza para inglês preservando o tom:\n\n' },
+  { icon: '🎨', title: 'Gerar imagem', prompt: '(troque o modelo para GPT Image 1 ou Imagen 3) Gere uma imagem de ' },
+  { icon: '📊', title: 'Analisar dados', prompt: 'Anexe um CSV/PDF e peça análise — ative o toggle "Code" para gráficos' },
+];
+
 export default function ChatArea({
   messages,
   setMessages,
@@ -59,6 +79,8 @@ export default function ChatArea({
   onOpenSettings,
   onOpenTemplates,
   onOpenConvSettings,
+  profile,
+  onMemoryAdded,
 }: Props) {
   const [input, setInput] = useState('');
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
@@ -118,7 +140,10 @@ export default function ChatArea({
     lines.push(`# ${activeConversation?.title || 'Conversa Entur IA'}`);
     lines.push(`\n_Exportado em ${new Date().toLocaleString('pt-BR')}_\n`);
     for (const m of messages) {
-      const who = m.role === 'user' ? '**Você**' : `**${getModel(m.model || '')?.label || 'Assistente'}**`;
+      const who =
+        m.role === 'user'
+          ? `**${profile?.name || 'Você'}**`
+          : `**${getModel(m.model || '')?.label || 'Assistente'}**`;
       lines.push(`\n---\n\n### ${who}\n`);
       if (m.content) lines.push(m.content);
       if (m.outputs?.images?.length) {
@@ -138,19 +163,74 @@ export default function ChatArea({
     URL.revokeObjectURL(url);
   };
 
-  const send = async () => {
-    const text = input.trim();
-    if ((!text && pendingAttachments.length === 0) || isStreaming) return;
+  const triggerBackgroundTasks = (
+    convId: string,
+    userMsg: string,
+    asstMsg: string,
+    isFirstExchange: boolean
+  ) => {
+    if (asstMsg) {
+      fetch('/api/memories/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userMessage: userMsg,
+          assistantReply: asstMsg,
+          conversationId: convId,
+        }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.saved?.length) {
+            for (const m of data.saved) onMemoryAdded(m.content);
+          }
+        })
+        .catch(() => {});
+    }
+
+    if (isFirstExchange && asstMsg) {
+      fetch(`/api/conversations/${convId}/title`, { method: 'POST' })
+        .then((r) => r.json())
+        .then(() => onAfterSend())
+        .catch(() => {});
+    }
+  };
+
+  const sendCore = async (
+    text: string,
+    attachments: PendingAttachment[],
+    options: { regenerateLast?: boolean; replaceUserContent?: string } = {}
+  ) => {
+    if ((!text && attachments.length === 0) || isStreaming) return;
 
     setError(null);
     setInput('');
     setIsStreaming(true);
 
-    const userMsg: MessageItem = {
-      role: 'user',
-      content: text,
-      attachments: pendingAttachments.length ? pendingAttachments : undefined,
-    };
+    const wasFirstExchange = messages.length === 0;
+
+    let userMsg: MessageItem;
+    if (options.regenerateLast) {
+      const lastUserIdx = [...messages].reverse().findIndex((m) => m.role === 'user');
+      const idxFromEnd = lastUserIdx;
+      if (idxFromEnd >= 0) {
+        const realIdx = messages.length - 1 - idxFromEnd;
+        userMsg = messages[realIdx];
+        setMessages(messages.slice(0, realIdx + 1));
+      } else {
+        userMsg = { role: 'user', content: text };
+      }
+    } else if (options.replaceUserContent) {
+      userMsg = { role: 'user', content: options.replaceUserContent };
+      setMessages([...messages.slice(0, -2), userMsg]);
+    } else {
+      userMsg = {
+        role: 'user',
+        content: text,
+        attachments: attachments.length ? attachments : undefined,
+      };
+    }
+
     const placeholder: MessageItem = {
       role: 'assistant',
       content: '',
@@ -158,12 +238,21 @@ export default function ChatArea({
       provider: currentModel?.provider,
       toolCalls: [],
     };
-    setMessages((prev) => [...prev, userMsg, placeholder]);
-    const sentAttachments = pendingAttachments;
-    setPendingAttachments([]);
+
+    if (options.regenerateLast || options.replaceUserContent) {
+      setMessages((prev) => [...prev, placeholder]);
+    } else {
+      setMessages((prev) => [...prev, userMsg, placeholder]);
+    }
+
+    if (!options.regenerateLast && !options.replaceUserContent) {
+      setPendingAttachments([]);
+    }
 
     const controller = new AbortController();
     abortRef.current = controller;
+
+    let assistantContent = '';
 
     try {
       const res = await fetch('/api/chat', {
@@ -172,8 +261,12 @@ export default function ChatArea({
         body: JSON.stringify({
           conversationId: activeId,
           modelId,
-          message: text,
-          attachments: sentAttachments,
+          message: options.regenerateLast
+            ? userMsg.content
+            : options.replaceUserContent || text,
+          attachments:
+            options.regenerateLast || options.replaceUserContent ? userMsg.attachments : attachments,
+          clearLast: options.regenerateLast ? 2 : options.replaceUserContent ? 2 : 0,
           tools: {
             webSearch: tools.webSearch && modelHas(modelId, 'web-search'),
             codeExec: tools.codeExec && modelHas(modelId, 'code-exec'),
@@ -191,11 +284,11 @@ export default function ChatArea({
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let assistantContent = '';
       let thinkingContent = '';
       const collectedImages: { mimeType: string; b64: string }[] = [];
       const collectedCitations: { url: string; title?: string }[] = [];
       const collectedTools: { tool: string; output?: string }[] = [];
+      let finalConvId: string | null = activeId;
 
       const updateLast = (patch: Partial<MessageItem>) => {
         setMessages((prev) => {
@@ -218,7 +311,12 @@ export default function ChatArea({
           try {
             const evt = JSON.parse(json);
             if (evt.type === 'meta') {
-              if (evt.isNew && evt.conversationId) setActiveId(evt.conversationId);
+              if (evt.isNew && evt.conversationId) {
+                setActiveId(evt.conversationId);
+                finalConvId = evt.conversationId;
+              } else if (evt.conversationId) {
+                finalConvId = evt.conversationId;
+              }
             } else if (evt.type === 'delta') {
               assistantContent += evt.text;
               updateLast({ content: assistantContent });
@@ -242,6 +340,15 @@ export default function ChatArea({
           }
         }
       }
+
+      if (finalConvId && (assistantContent || collectedImages.length)) {
+        triggerBackgroundTasks(
+          finalConvId,
+          userMsg.content,
+          assistantContent || '(imagem gerada)',
+          wasFirstExchange
+        );
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(msg);
@@ -263,6 +370,19 @@ export default function ChatArea({
     }
   };
 
+  const send = () => sendCore(input.trim(), pendingAttachments);
+
+  const regenerate = () => {
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'assistant') return;
+    setMessages((prev) => prev.slice(0, -1));
+    sendCore('', [], { regenerateLast: true });
+  };
+
+  const editLastUser = (newContent: string) => {
+    sendCore('', [], { replaceUserContent: newContent });
+  };
+
   const stop = () => {
     abortRef.current?.abort();
     setIsStreaming(false);
@@ -281,42 +401,50 @@ export default function ChatArea({
       currentModel.capabilities.includes('image-edit')
     : false;
 
+  const lastAssistantIdx = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') return i;
+    }
+    return -1;
+  })();
+
   return (
     <main className="flex-1 flex flex-col h-full bg-bg-primary">
       <header className="flex items-center gap-2 px-4 h-14 border-b border-white/5">
+        <button onClick={onToggleSidebar} className="p-2 rounded-lg hover:bg-white/5 transition md:hidden">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+        </button>
         {!sidebarOpen && (
-          <button onClick={onToggleSidebar} className="p-2 rounded-lg hover:bg-white/5 transition">
+          <button onClick={onToggleSidebar} className="p-2 rounded-lg hover:bg-white/5 transition hidden md:block">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 6h18M3 12h18M3 18h18" />
             </svg>
           </button>
         )}
-        <div className="font-semibold">{activeConversation?.title || 'Entur IA'}</div>
+        <div className="font-semibold truncate">
+          {activeConversation?.title || 'Entur IA'}
+        </div>
         <div className="ml-auto flex items-center gap-1">
           {activeId && (
             <>
               <button
                 onClick={onOpenConvSettings}
-                className="text-xs px-2 py-1.5 rounded-lg hover:bg-white/5 transition"
+                className="text-xs px-2 py-1.5 rounded-lg hover:bg-white/5 transition hidden sm:block"
                 title="System prompt da conversa"
               >
                 ⚙️ Prompt
               </button>
               <button
                 onClick={exportConversation}
-                className="text-xs px-2 py-1.5 rounded-lg hover:bg-white/5 transition"
+                className="text-xs px-2 py-1.5 rounded-lg hover:bg-white/5 transition hidden sm:block"
                 title="Exportar markdown"
               >
                 ⬇️ Export
               </button>
             </>
           )}
-          <button
-            onClick={onOpenTemplates}
-            className="text-xs px-2 py-1.5 rounded-lg hover:bg-white/5 transition"
-          >
-            📋 Templates
-          </button>
           <button
             onClick={onNewChat}
             className="text-sm px-3 py-1.5 rounded-lg hover:bg-white/5 transition"
@@ -329,7 +457,14 @@ export default function ChatArea({
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
           {messages.length === 0 ? (
-            <Welcome />
+            <Welcome
+              profile={profile}
+              onPick={(prompt) => {
+                setInput(prompt);
+                taRef.current?.focus();
+              }}
+              onOpenSettings={() => onOpenSettings('profile')}
+            />
           ) : (
             messages.map((m, i) => (
               <MessageBubble
@@ -341,6 +476,13 @@ export default function ChatArea({
                   m.role === 'assistant' &&
                   !!m.content
                 }
+                onRegenerate={i === messages.length - 1 && m.role === 'assistant' ? regenerate : undefined}
+                onEdit={
+                  m.role === 'user' && i === messages.length - 2
+                    ? (newContent) => editLastUser(newContent)
+                    : undefined
+                }
+                isLastAssistant={i === lastAssistantIdx}
               />
             ))
           )}
@@ -348,17 +490,20 @@ export default function ChatArea({
             <div className="text-sm text-red-400 bg-red-900/20 border border-red-900/40 rounded-lg p-3">
               <div>Erro: {error}</div>
               {error.includes('não configurada') && (
-                <button onClick={onOpenSettings} className="underline mt-1">
+                <button onClick={() => onOpenSettings('api')} className="underline mt-1">
                   Abrir Configurações
                 </button>
               )}
             </div>
           )}
-          {isStreaming && messages[messages.length - 1]?.role === 'assistant' && !messages[messages.length - 1]?.content && !messages[messages.length - 1]?.outputs && (
-            <div className="text-sm text-text-tertiary flex items-center gap-2">
-              <span className="cursor-blink">{isImage ? 'Gerando imagem' : 'Pensando'}</span>
-            </div>
-          )}
+          {isStreaming &&
+            messages[messages.length - 1]?.role === 'assistant' &&
+            !messages[messages.length - 1]?.content &&
+            !messages[messages.length - 1]?.outputs && (
+              <div className="text-sm text-text-tertiary flex items-center gap-2">
+                <span className="cursor-blink">{isImage ? 'Gerando imagem' : 'Pensando'}</span>
+              </div>
+            )}
         </div>
       </div>
 
@@ -433,6 +578,14 @@ export default function ChatArea({
                   </button>
                 )}
 
+                <button
+                  onClick={onOpenTemplates}
+                  className="text-xs px-2 py-1 rounded-md border border-white/10 text-text-secondary hover:bg-white/5 transition"
+                  title="Templates de prompt"
+                >
+                  📋
+                </button>
+
                 {modelHas(modelId, 'web-search') && (
                   <ToolToggle
                     label="🔎 Web"
@@ -474,7 +627,7 @@ export default function ChatArea({
                   onClick={send}
                   disabled={!input.trim() && pendingAttachments.length === 0}
                   className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 transition"
-                  title="Enviar"
+                  title="Enviar (Enter)"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M12 19V5M5 12l7-7 7 7" />
@@ -484,7 +637,7 @@ export default function ChatArea({
             </div>
           </div>
           <div className="text-xs text-text-tertiary text-center mt-2">
-            Entur IA pode cometer erros. Verifique informações importantes.
+            Entur IA aprende com você. Verifique informações importantes.
           </div>
         </div>
       </div>
@@ -518,17 +671,49 @@ function ToolToggle({
   );
 }
 
-function Welcome() {
+function Welcome({
+  profile,
+  onPick,
+  onOpenSettings,
+}: {
+  profile: UserProfile | null;
+  onPick: (text: string) => void;
+  onOpenSettings: () => void;
+}) {
+  const name = profile?.name?.trim();
   return (
-    <div className="text-center mt-20">
-      <h1 className="text-3xl font-semibold mb-3">Entur IA</h1>
+    <div className="text-center pt-12 pb-8 animate-fade-in">
+      <div className="text-4xl mb-3">✨</div>
+      <h1 className="text-3xl font-semibold mb-2">
+        {greeting()}{name ? `, ${name}` : ''}!
+      </h1>
       <p className="text-text-secondary">
-        Converse com GPT, Gemini ou Claude. Anexe imagens, gere imagens, busque na web, execute
-        código.
+        {profile?.role
+          ? `O que vamos resolver hoje no seu trabalho como ${profile.role.toLowerCase()}?`
+          : 'Como posso ajudar hoje?'}
       </p>
-      <div className="mt-8 text-sm text-text-tertiary">
-        Selecione um modelo abaixo. Modelos com capacidades especiais habilitam toggles próprios.
+
+      <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-2 max-w-2xl mx-auto">
+        {SUGGESTIONS.map((s) => (
+          <button
+            key={s.title}
+            onClick={() => onPick(s.prompt)}
+            className="text-left p-3 rounded-xl border border-white/10 hover:bg-white/5 hover:border-white/20 transition"
+          >
+            <div className="text-xl mb-1">{s.icon}</div>
+            <div className="font-medium text-sm">{s.title}</div>
+          </button>
+        ))}
       </div>
+
+      {!profile?.name && (
+        <button
+          onClick={onOpenSettings}
+          className="mt-8 text-xs text-text-tertiary hover:text-text-primary underline"
+        >
+          Configurar seu perfil →
+        </button>
+      )}
     </div>
   );
 }

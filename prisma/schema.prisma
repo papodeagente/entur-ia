@@ -12,11 +12,13 @@ model Conversation {
   title        String    @default("Nova conversa")
   systemPrompt String?   @db.Text
   toolsConfig  Json?
+  pinned       Boolean   @default(false)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   messages     Message[]
 
   @@index([updatedAt])
+  @@index([pinned, updatedAt])
 }
 
 model Message {
@@ -51,4 +53,27 @@ model Setting {
   key       String   @id
   value     String   @db.Text
   updatedAt DateTime @updatedAt
+}
+
+model UserProfile {
+  id                 String   @id @default("default")
+  name               String?
+  role               String?
+  context            String?  @db.Text
+  customInstructions String?  @db.Text
+  onboarded          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model UserMemory {
+  id             String   @id @default(cuid())
+  content        String   @db.Text
+  category       String?
+  sourceConvId   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([category])
+  @@index([createdAt])
 }

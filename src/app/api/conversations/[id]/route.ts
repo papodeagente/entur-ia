@@ -20,6 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (typeof body.title === 'string') data.title = body.title;
   if (typeof body.systemPrompt === 'string') data.systemPrompt = body.systemPrompt || null;
   if (body.toolsConfig !== undefined) data.toolsConfig = body.toolsConfig;
+  if (typeof body.pinned === 'boolean') data.pinned = body.pinned;
 
   const conv = await prisma.conversation.update({
     where: { id: params.id },
