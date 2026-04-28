@@ -25,6 +25,8 @@ export interface ModelDef {
   imageEndpoint?: 'openai-images' | 'gemini-imagen' | 'gemini-flash-image';
   // Default tool flags shown as toggles in UI
   defaultTools?: { webSearch?: boolean; codeExec?: boolean; thinking?: boolean };
+  // Sinaliza que o modelo NÃO funciona em chave free tier do provider
+  requiresBilling?: boolean;
 }
 
 export const MODELS: ModelDef[] = [
@@ -88,20 +90,11 @@ export const MODELS: ModelDef[] = [
 
   // ===== Google =====
   {
-    id: 'gemini-2.5-pro',
-    label: 'Gemini 2.5 Pro',
-    provider: 'gemini',
-    kind: 'chat',
-    description: 'Google flagship — thinking, contexto longo, multimodal',
-    badgeColor: 'bg-blue-600',
-    capabilities: ['text', 'vision', 'pdf', 'thinking', 'web-search', 'code-exec'],
-  },
-  {
     id: 'gemini-2.5-flash',
     label: 'Gemini 2.5 Flash',
     provider: 'gemini',
     kind: 'chat',
-    description: 'Google rápido com thinking opcional',
+    description: 'Google rápido com thinking — free tier OK',
     badgeColor: 'bg-blue-500',
     capabilities: ['text', 'vision', 'pdf', 'thinking', 'web-search', 'code-exec'],
   },
@@ -110,19 +103,48 @@ export const MODELS: ModelDef[] = [
     label: 'Gemini 2.0 Flash',
     provider: 'gemini',
     kind: 'chat',
-    description: 'Google multimodal nativo, geração inline de imagens',
+    description: 'Google multimodal nativo — free tier OK',
     badgeColor: 'bg-blue-400',
     capabilities: ['text', 'vision', 'pdf', 'web-search', 'code-exec'],
+  },
+  {
+    id: 'gemini-1.5-pro',
+    label: 'Gemini 1.5 Pro',
+    provider: 'gemini',
+    kind: 'chat',
+    description: 'Google contexto longo (2M tokens) — free tier OK',
+    badgeColor: 'bg-blue-600',
+    capabilities: ['text', 'vision', 'pdf', 'web-search', 'code-exec'],
+  },
+  {
+    id: 'gemini-1.5-flash',
+    label: 'Gemini 1.5 Flash',
+    provider: 'gemini',
+    kind: 'chat',
+    description: 'Google rápido e econômico — free tier OK',
+    badgeColor: 'bg-blue-300',
+    capabilities: ['text', 'vision', 'pdf'],
+  },
+  {
+    id: 'gemini-2.5-pro',
+    label: 'Gemini 2.5 Pro',
+    provider: 'gemini',
+    kind: 'chat',
+    description: 'Google flagship — exige billing ativo na conta Google',
+    badgeColor: 'bg-blue-700',
+    capabilities: ['text', 'vision', 'pdf', 'thinking', 'web-search', 'code-exec'],
+    requiresBilling: true,
   },
   {
     id: 'imagen-3.0-generate-002',
     label: 'Imagen 3',
     provider: 'gemini',
     kind: 'image',
-    description: 'Google gerador dedicado, fotorrealismo de ponta',
+    description: 'Google fotorrealismo — exige billing ativo',
     badgeColor: 'bg-blue-600',
     capabilities: ['image-gen'],
     imageEndpoint: 'gemini-imagen',
+    requiresBilling: true,
   },
 
   // ===== Anthropic =====

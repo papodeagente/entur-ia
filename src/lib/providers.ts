@@ -49,6 +49,55 @@ export class MissingKeyError extends Error {
   }
 }
 
+export function humanizeProviderError(err: unknown, provider: Provider, modelId: string): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  const lower = raw.toLowerCase();
+
+  if (provider === 'gemini') {
+    if (lower.includes('429') || lower.includes('quota') || lower.includes('rate limit')) {
+      if (modelId === 'gemini-2.5-pro' || modelId === 'imagen-3.0-generate-002') {
+        return `O modelo "${modelId}" exige uma conta Google AI com billing ativo. Sua chave atual está no free tier (limit: 0 para esse modelo).\n\nO que fazer:\n  1) Trocar para um modelo do free tier: Gemini 2.5 Flash, 2.0 Flash, 1.5 Pro ou 1.5 Flash.\n  2) Ou ativar billing em https://aistudio.google.com/apikey > Set up billing.`;
+      }
+      return `Quota do Gemini estourada. Aguarde alguns segundos e tente de novo, ou troque para outro modelo (ex: Gemini 1.5 Flash) ou ative billing em https://aistudio.google.com/apikey.`;
+    }
+    if (lower.includes('401') || lower.includes('api key') || lower.includes('unauthenticated')) {
+      return 'Chave do Google Gemini inválida ou sem permissão. Cadastre uma chave válida em Configurações > Chaves de API.';
+    }
+    if (lower.includes('safety') || lower.includes('blocked')) {
+      return 'O Gemini bloqueou a resposta por filtro de segurança. Reformule a pergunta ou troque de modelo.';
+    }
+  }
+
+  if (provider === 'openai') {
+    if (lower.includes('429') || lower.includes('insufficient_quota')) {
+      return 'Quota da OpenAI estourada ou sem créditos. Verifique billing em https://platform.openai.com/account/billing.';
+    }
+    if (lower.includes('401') || lower.includes('invalid_api_key')) {
+      return 'Chave da OpenAI inválida. Cadastre uma chave válida em Configurações > Chaves de API.';
+    }
+    if (lower.includes('model_not_found') || lower.includes('does not exist')) {
+      return `Modelo "${modelId}" indisponível na sua conta OpenAI (pode exigir tier mais alto). Tente GPT-4o ou GPT-4o mini.`;
+    }
+    if (lower.includes('content_policy') || lower.includes('safety')) {
+      return 'OpenAI bloqueou a resposta por política de conteúdo. Reformule a pergunta.';
+    }
+  }
+
+  if (provider === 'anthropic') {
+    if (lower.includes('429') || lower.includes('rate_limit')) {
+      return 'Quota da Anthropic estourada. Aguarde alguns segundos ou verifique limits em https://console.anthropic.com/settings/limits.';
+    }
+    if (lower.includes('401') || lower.includes('authentication')) {
+      return 'Chave da Anthropic inválida. Cadastre uma chave válida em Configurações > Chaves de API.';
+    }
+    if (lower.includes('not_found_error') || lower.includes("doesn't exist")) {
+      return `Modelo "${modelId}" não encontrado na conta Anthropic. Tente Claude Sonnet 4.6 ou Haiku 4.5.`;
+    }
+  }
+
+  return raw.length > 800 ? raw.slice(0, 800) + '...' : raw;
+}
+
 // ============== OpenAI - Chat ==============
 export async function* streamOpenAI({
   model,

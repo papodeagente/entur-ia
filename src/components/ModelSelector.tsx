@@ -81,6 +81,11 @@ export default function ModelSelector({ modelId, setModelId }: Props) {
                   <div className="flex items-center gap-2">
                     <span className={`w-2 h-2 rounded-full ${m.badgeColor}`} />
                     <span className="font-medium text-sm">{m.label}</span>
+                    {m.requiresBilling && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-900/40 text-yellow-300 border border-yellow-700/30">
+                        $ billing
+                      </span>
+                    )}
                     {m.id === modelId && (
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="ml-auto">
                         <path d="M20 6L9 17l-5-5" />

@@ -8,6 +8,8 @@ import {
   Attachment,
   ToolFlags,
   StreamEvent,
+  humanizeProviderError,
+  MissingKeyError,
 } from '@/lib/providers';
 import { buildSystemPrompt } from '@/lib/userContext';
 
@@ -216,8 +218,11 @@ export async function POST(req: NextRequest) {
 
         send({ type: 'done' });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Erro desconhecido';
-        send({ type: 'error', message });
+        const friendly =
+          err instanceof MissingKeyError
+            ? err.message
+            : humanizeProviderError(err, model.provider, model.id);
+        send({ type: 'error', message: friendly });
       } finally {
         controller.close();
       }

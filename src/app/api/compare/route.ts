@@ -1,6 +1,13 @@
 import { NextRequest } from 'next/server';
 import { getModel } from '@/lib/models';
-import { streamFromProvider, ChatMessage, ToolFlags, StreamEvent } from '@/lib/providers';
+import {
+  streamFromProvider,
+  ChatMessage,
+  ToolFlags,
+  StreamEvent,
+  humanizeProviderError,
+  MissingKeyError,
+} from '@/lib/providers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,11 +61,11 @@ export async function POST(req: NextRequest) {
           }
           send({ type: 'done', modelId });
         } catch (err) {
-          send({
-            type: 'error',
-            modelId,
-            message: err instanceof Error ? err.message : 'Erro',
-          });
+          const friendly =
+            err instanceof MissingKeyError
+              ? err.message
+              : humanizeProviderError(err, m.provider, m.id);
+          send({ type: 'error', modelId, message: friendly });
         }
       });
 
