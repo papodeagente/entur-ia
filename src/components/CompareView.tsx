@@ -97,20 +97,22 @@ export default function CompareView({ open, onClose }: Props) {
     }
   };
 
+  const cols = selected.length >= 3 ? 2 : selected.length;
+
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex flex-col" onClick={onClose}>
       <div
-        className="flex-1 flex flex-col bg-bg-primary"
+        className="flex-1 flex flex-col bg-bg-primary min-h-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2 px-4 h-14 border-b border-white/10">
+        <div className="flex items-center gap-2 px-4 h-14 border-b border-white/10 shrink-0">
           <h2 className="font-semibold">Modo Comparar (arena)</h2>
           <button onClick={onClose} className="ml-auto p-2 rounded-lg hover:bg-white/5">
             ✕
           </button>
         </div>
 
-        <div className="px-4 py-3 border-b border-white/10 space-y-2">
+        <div className="px-4 py-3 border-b border-white/10 space-y-2 shrink-0">
           <div className="text-xs text-text-tertiary">Selecione 2-4 modelos para comparar:</div>
           <div className="flex flex-wrap gap-1">
             {chatModels.map((m) => (
@@ -139,42 +141,62 @@ export default function CompareView({ open, onClose }: Props) {
             <button
               onClick={run}
               disabled={running || !prompt.trim() || selected.length === 0}
-              className="px-4 rounded-lg bg-white text-black hover:bg-white/90 disabled:opacity-30"
+              className="px-4 rounded-lg bg-white text-black hover:bg-white/90 disabled:opacity-30 shrink-0"
             >
               {running ? 'Rodando...' : 'Comparar'}
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           <div
-            className="grid h-full"
-            style={{ gridTemplateColumns: `repeat(${Math.max(selected.length, 1)}, minmax(280px, 1fr))` }}
+            className={`grid gap-3 p-3 grid-cols-1 ${
+              cols >= 2 ? 'md:grid-cols-2' : ''
+            }`}
           >
             {selected.map((id) => {
               const m = getModel(id);
               const r = results[id];
               return (
-                <div key={id} className="border-r border-white/10 last:border-r-0 overflow-y-auto p-4">
-                  <div className="flex items-center gap-2 mb-3 sticky top-0 bg-bg-primary py-2">
+                <div
+                  key={id}
+                  className="rounded-xl border border-white/10 bg-bg-secondary p-4 min-w-0"
+                >
+                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
                     <span className={`w-2 h-2 rounded-full ${m?.badgeColor}`} />
-                    <span className="font-medium text-sm">{m?.label}</span>
-                    {r?.done && !r.error && <span className="text-xs text-emerald-400">✓</span>}
-                    {r?.error && <span className="text-xs text-red-400">erro</span>}
+                    <span className="font-medium text-sm truncate">{m?.label}</span>
+                    {r?.done && !r.error && (
+                      <span className="text-xs text-emerald-400 ml-auto shrink-0">✓ Pronto</span>
+                    )}
+                    {r?.error && (
+                      <span className="text-xs text-red-400 ml-auto shrink-0">erro</span>
+                    )}
+                    {r && !r.done && !r.error && (
+                      <span className="text-xs text-text-tertiary ml-auto cursor-blink shrink-0">
+                        gerando
+                      </span>
+                    )}
                   </div>
                   {r?.error ? (
-                    <div className="text-xs text-red-300 bg-red-900/20 rounded p-2">{r.error}</div>
+                    <div className="text-xs text-red-300 bg-red-900/20 rounded p-2 break-words whitespace-pre-wrap">
+                      {r.error}
+                    </div>
                   ) : (
-                    <div className="markdown-body text-sm">
+                    <div className="markdown-body text-sm break-words">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{r?.text || ''}</ReactMarkdown>
                     </div>
                   )}
                   {r?.citations?.length ? (
-                    <div className="mt-3 text-xs text-text-tertiary">
+                    <div className="mt-3 text-xs text-text-tertiary border-t border-white/5 pt-2">
                       <div className="mb-1">Fontes:</div>
                       {r.citations.map((c, i) => (
-                        <div key={i}>
-                          <a href={c.url} target="_blank" rel="noopener" className="text-blue-300 underline">
+                        <div key={i} className="break-all">
+                          <a
+                            href={c.url}
+                            target="_blank"
+                            rel="noopener"
+                            className="text-blue-300 underline"
+                          >
                             {i + 1}. {c.title || c.url}
                           </a>
                         </div>

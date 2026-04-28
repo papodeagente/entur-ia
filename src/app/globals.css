@@ -32,6 +32,8 @@ html, body {
 .markdown-body {
   line-height: 1.7;
   font-size: 15px;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 .markdown-body p {
   margin: 0 0 1em 0;
