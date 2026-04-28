@@ -423,8 +423,13 @@ export default function ChatArea({
             </svg>
           </button>
         )}
-        <div className="font-semibold truncate">
-          {activeConversation?.title || 'Entur IA'}
+        <div className="flex items-center gap-2 truncate min-w-0">
+          {!activeConversation && (
+            <img src="/logo-mark.svg" alt="Entur" className="h-6 w-auto" />
+          )}
+          <span className="font-semibold truncate">
+            {activeConversation?.title || 'Entur IA'}
+          </span>
         </div>
         <div className="ml-auto flex items-center gap-1">
           {activeId && (
@@ -682,8 +687,14 @@ function Welcome({
 }) {
   const name = profile?.name?.trim();
   return (
-    <div className="text-center pt-12 pb-8 animate-fade-in">
-      <div className="text-4xl mb-3">✨</div>
+    <div className="text-center pt-10 pb-8 animate-fade-in">
+      <div className="flex justify-center mb-6">
+        <img
+          src="/logo.svg"
+          alt="Entur · Escola de Negócios do Turismo"
+          className="h-14 sm:h-16 w-auto"
+        />
+      </div>
       <h1 className="text-3xl font-semibold mb-2">
         {greeting()}{name ? `, ${name}` : ''}!
       </h1>

@@ -27,8 +27,8 @@ export default function OnboardingModal({ open, onComplete, onSkip }: Props) {
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-bg-secondary border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg p-8">
         <div className="text-center mb-6">
-          <div className="text-3xl mb-2">👋</div>
-          <h2 className="text-2xl font-bold">Bem-vindo ao Entur IA</h2>
+          <img src="/logo.svg" alt="Entur" className="h-10 w-auto mx-auto mb-3" />
+          <h2 className="text-2xl font-bold">Bem-vindo ao Entur IA 👋</h2>
           <p className="text-sm text-text-secondary mt-2">
             Vamos personalizar sua experiência em 3 passos rápidos. Pode pular se preferir.
           </p>
